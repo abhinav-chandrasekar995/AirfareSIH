@@ -12,13 +12,12 @@ from __future__ import annotations
 import csv
 import io
 import json
-from datetime import date, datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import IndexLevel
 from app.core.exceptions import NotFoundError
 from app.db.session import get_session
 from app.services import analytics_service, dashboard_service, index_service
@@ -46,7 +45,7 @@ async def report_index_summary(
 ):
     dash = await dashboard_service.get_dashboard(session)
     regional = await index_service.get_regional_summaries(session)
-    generated_at = datetime.now(timezone.utc).isoformat()
+    generated_at = datetime.now(UTC).isoformat()
 
     if fmt == "json":
         payload = {
