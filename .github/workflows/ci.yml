@@ -47,7 +47,11 @@ jobs:
         run: alembic upgrade head
       - name: Load seed dataset
         working-directory: backend
-        run: python -m seeds.load_seed
+        run: |
+          set -o pipefail
+          python -m seeds.load_seed | tee /tmp/seed_output.txt
+          echo "TEST_ADMIN_API_KEY=$(grep -oP '(?<=ADMIN    )\S+' /tmp/seed_output.txt)" >> "$GITHUB_ENV"
+          echo "TEST_PUBLIC_API_KEY=$(grep -oP '(?<=PUBLIC   )\S+' /tmp/seed_output.txt)" >> "$GITHUB_ENV"
       - name: Run tests
         working-directory: backend
         run: pytest -q --cov=app --cov-report=term-missing
