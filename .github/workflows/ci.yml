@@ -25,14 +25,34 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql+asyncpg://airfare:airfare@localhost:5432/airfare_test
-      TEST_DATABASE_URL: postgresql+asyncpg://airfare:airfare@localhost:5432/airfare_test
+      # airfare_app, not airfare: the postgres service's POSTGRES_USER (airfare) is the
+      # cluster's bootstrap superuser (standard behaviour of the official image, not a
+      # misconfiguration) - superusers are never subject to RLS, no matter how many
+      # policies exist or whether FORCE ROW LEVEL SECURITY is set. db/rls.py assumes a
+      # NOSUPERUSER, NOBYPASSRLS connecting role; airfare_app is created below to
+      # actually be that role, matching what a real deployment (this project's own
+      # Supabase path included) always uses. See IMPLEMENTATION_LOG.md D-084.
+      DATABASE_URL: postgresql+asyncpg://airfare_app:airfare@localhost:5432/airfare_test
+      TEST_DATABASE_URL: postgresql+asyncpg://airfare_app:airfare@localhost:5432/airfare_test
       REDIS_URL: redis://localhost:6379/0
       FORCE_DATA_MODE: REPLAY
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
+      - name: Create restricted app role (airfare_app) - see D-084
+        run: |
+          export PGPASSWORD=airfare
+          psql -h localhost -U airfare -d airfare_test -c "
+            DO \$\$
+            BEGIN
+              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'airfare_app') THEN
+                CREATE ROLE airfare_app WITH LOGIN PASSWORD 'airfare' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+              END IF;
+            END
+            \$\$;"
+          psql -h localhost -U airfare -d airfare_test -c "ALTER SCHEMA public OWNER TO airfare_app;"
+          psql -h localhost -U airfare -d airfare_test -c "GRANT ALL PRIVILEGES ON DATABASE airfare_test TO airfare_app;"
       - name: Install dependencies
         working-directory: backend
         run: pip install -r requirements-dev.txt
@@ -52,25 +72,17 @@ jobs:
           python -m seeds.load_seed | tee /tmp/seed_output.txt
           echo "TEST_ADMIN_API_KEY=$(grep -oP '(?<=ADMIN    )\S+' /tmp/seed_output.txt)" >> "$GITHUB_ENV"
           echo "TEST_PUBLIC_API_KEY=$(grep -oP '(?<=PUBLIC   )\S+' /tmp/seed_output.txt)" >> "$GITHUB_ENV"
-      - name: Strip superuser from the CI role (RLS cannot be bypassed in production/Supabase; the official postgres Docker image grants POSTGRES_USER superuser by default, which this app's role must never have - see db/rls.py)
+      - name: DIAGNOSTIC - inspect RLS state directly via psql (temporary, remove after D-084 confirmed)
         run: |
           export PGPASSWORD=airfare
-          psql -h localhost -U airfare -d airfare_test -c "ALTER ROLE airfare WITH NOSUPERUSER NOBYPASSRLS;"
-      - name: DIAGNOSTIC - inspect RLS state directly via psql (temporary, remove after D-084)
-        run: |
-          export PGPASSWORD=airfare
-          echo "--- relrowsecurity / relforcerowsecurity / owner ---"
-          psql -h localhost -U airfare -d airfare_test -c "SELECT relname, relrowsecurity, relforcerowsecurity, relowner::regrole FROM pg_class WHERE relname IN ('api_keys','audit_log');"
-          echo "--- policies ---"
-          psql -h localhost -U airfare -d airfare_test -c "SELECT tablename, policyname, permissive, roles, cmd FROM pg_policies WHERE tablename IN ('api_keys','audit_log');"
-          echo "--- current_user / session_user ---"
-          psql -h localhost -U airfare -d airfare_test -c "SELECT current_user, session_user;"
-          echo "--- PUBLIC role via raw psql, should be 0 ---"
-          psql -h localhost -U airfare -d airfare_test -c "SET app.role='PUBLIC'; SELECT count(*) FROM api_keys;"
-          echo "--- no role set at all via raw psql, should be 0 ---"
-          psql -h localhost -U airfare -d airfare_test -c "SELECT count(*) FROM api_keys;"
-          echo "--- ADMIN role via raw psql, for context (real total row count) ---"
-          psql -h localhost -U airfare -d airfare_test -c "SET app.role='ADMIN'; SELECT count(*) FROM api_keys;"
+          echo "--- airfare_app role attributes ---"
+          psql -h localhost -U airfare -d airfare_test -c "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'airfare_app';"
+          echo "--- PUBLIC role via raw psql AS airfare_app, should be 0 ---"
+          psql -h localhost -U airfare_app -d airfare_test -c "SET app.role='PUBLIC'; SELECT count(*) FROM api_keys;"
+          echo "--- no role set at all via raw psql AS airfare_app, should be 0 ---"
+          psql -h localhost -U airfare_app -d airfare_test -c "SELECT count(*) FROM api_keys;"
+          echo "--- ADMIN role via raw psql AS airfare_app, for context (real total row count) ---"
+          psql -h localhost -U airfare_app -d airfare_test -c "SET app.role='ADMIN'; SELECT count(*) FROM api_keys;"
       - name: Run tests
         working-directory: backend
         run: pytest -q --cov=app --cov-report=term-missing

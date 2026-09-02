@@ -26,7 +26,12 @@ jobs:
         image: redis:7-alpine
         ports: ["6379:6379"]
     env:
-      DATABASE_URL: postgresql+asyncpg://airfare:airfare@localhost:5432/airfare_test
+      # airfare_app, not airfare - see ci.yml's identical comment and
+      # IMPLEMENTATION_LOG.md D-084. The postgres service's POSTGRES_USER (airfare) is
+      # the cluster's bootstrap superuser, which bypasses RLS entirely regardless of
+      # policies; airfare_app is created below to be the actual NOSUPERUSER,
+      # NOBYPASSRLS role db/rls.py assumes, matching a real deployment.
+      DATABASE_URL: postgresql+asyncpg://airfare_app:airfare@localhost:5432/airfare_test
       REDIS_URL: redis://localhost:6379/0
       FORCE_DATA_MODE: REPLAY
       COLLECTION_ENABLED: "false"
@@ -37,6 +42,20 @@ jobs:
         with: { python-version: "3.12" }
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
+
+      - name: Create restricted app role (airfare_app) - see D-084
+        run: |
+          export PGPASSWORD=airfare
+          psql -h localhost -U airfare -d airfare_test -c "
+            DO \$\$
+            BEGIN
+              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'airfare_app') THEN
+                CREATE ROLE airfare_app WITH LOGIN PASSWORD 'airfare' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+              END IF;
+            END
+            \$\$;"
+          psql -h localhost -U airfare -d airfare_test -c "ALTER SCHEMA public OWNER TO airfare_app;"
+          psql -h localhost -U airfare -d airfare_test -c "GRANT ALL PRIVILEGES ON DATABASE airfare_test TO airfare_app;"
 
       - name: Backend up
         working-directory: backend
