@@ -154,10 +154,24 @@ def upgrade() -> None:
     _create_all_tables()
 
     if has_timescale:
-        _make_hypertables()
         try:
             # Same savepoint reasoning as _enable_timescale(): a failure here must not
-            # poison the transaction that still has to enable RLS below.
+            # poison the transaction that still has to enable RLS below. This step can
+            # genuinely fail even with the extension present - create_hypertable()
+            # requires any PRIMARY KEY on the table to include the partitioning column,
+            # which fare_observations(_raw)'s single-column autoincrement PK does not.
+            # Fixing that would mean a composite primary key, which is a real schema
+            # change; hypertables are explicitly a performance feature here; not a
+            # correctness one (see this module's docstring), so falling back to plain
+            # indexes on failure is the same story datamode-degradation already tells,
+            # not a new one.
+            with op.get_bind().begin_nested():
+                _make_hypertables()
+        except Exception:
+            has_timescale = False
+
+    if has_timescale:
+        try:
             with op.get_bind().begin_nested():
                 _continuous_aggregates()
         except Exception:
