@@ -1,0 +1,158 @@
+/*
+ * Brutalist design layer - MARKETING SITE ONLY.
+ *
+ * Scoped under a `.brutal` wrapper class applied at (marketing)/layout.tsx, so the
+ * analytical app (dashboard, routes, anomalies, etc.) keeps the restrained
+ * Bloomberg-style system from tokens.css untouched - this is a styling addition, not a
+ * replacement. Structure follows the brutalism style guide (raw borders, stark
+ * contrast, hard offset shadows, bold blocky type, instant/snappy transitions,
+ * asymmetric grids); the palette is adapted from the skill's generic pink/cyan default
+ * to the product's own navy + a signal-amber/red accent, so the marketing site still
+ * reads as an aviation/statistics platform rather than a generic "creative brand."
+ */
+
+.brutal {
+  --b-ink: #0A0E1A;         /* near-black, warmer than pure black for print-like feel */
+  --b-paper: #F5F3EE;       /* off-white "paper", not clinical white */
+  --b-paper-alt: #EAE6DC;
+  --b-navy: #12193B;        /* from the analytical system - keeps brand continuity */
+  --b-signal: #FF3B1F;      /* alert/CTA red - "surge" colour, matches the product's own semantics */
+  --b-amber: #FFB800;
+  --b-cyan: #00D9C0;
+
+  --b-border: 3px;
+  --b-border-thick: 5px;
+  --b-shadow-offset: 8px;
+
+  background: var(--b-paper);
+  color: var(--b-ink);
+  font-family: var(--font-sans);
+
+  /* Re-theme the SHARED analytical tokens (used by Breadcrumbs and any other reused
+     component) so they automatically pick up the brutalist palette here without
+     needing per-component edits - those components are also used on the app side,
+     where the original tokens.css values must stay untouched. */
+  --bg-app: var(--b-paper);
+  --bg-panel: var(--b-paper);
+  --bg-panel-alt: var(--b-paper-alt);
+  --text-primary: var(--b-ink);
+  --text-secondary: var(--b-ink);
+  --text-muted: color-mix(in srgb, var(--b-ink) 65%, transparent);
+  --text-accent: var(--b-signal);
+  --border-subtle: var(--b-ink);
+  --border-strong: var(--b-ink);
+}
+
+.brutal[data-theme="dark"],
+:root[data-theme="dark"] .brutal {
+  --b-ink: #F5F3EE;
+  --b-paper: #0A0E1A;
+  --b-paper-alt: #12172A;
+  background: var(--b-paper);
+  color: var(--b-ink);
+}
+
+/* ---------- Type scale: bold, blocky, condensed line-height ---------- */
+.brutal .b-display {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.brutal .b-mono-tag {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+}
+
+/* ---------- Hard border + offset shadow: the core brutalist primitive ---------- */
+.brutal .b-block {
+  border: var(--b-border) solid var(--b-ink);
+  background: var(--b-paper);
+  box-shadow: var(--b-shadow-offset) var(--b-shadow-offset) 0 0 var(--b-ink);
+  border-radius: 0;
+  transition: transform 120ms steps(3), box-shadow 120ms steps(3);
+}
+.brutal .b-block:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: calc(var(--b-shadow-offset) + 4px) calc(var(--b-shadow-offset) + 4px) 0 0 var(--b-ink);
+}
+.brutal .b-block-signal {
+  border-color: var(--b-ink);
+  background: var(--b-signal);
+  color: #fff;
+  box-shadow: var(--b-shadow-offset) var(--b-shadow-offset) 0 0 var(--b-ink);
+}
+
+.brutal .b-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: var(--b-border) solid var(--b-ink);
+  background: var(--b-ink);
+  color: var(--b-paper);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 14px 24px;
+  box-shadow: 6px 6px 0 0 var(--b-signal);
+  transition: transform 100ms steps(2), box-shadow 100ms steps(2);
+  cursor: pointer;
+}
+.brutal .b-btn:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 9px 9px 0 0 var(--b-signal);
+}
+.brutal .b-btn:active {
+  transform: translate(0, 0);
+  box-shadow: 2px 2px 0 0 var(--b-signal);
+}
+.brutal .b-btn-outline {
+  background: transparent;
+  color: var(--b-ink);
+  box-shadow: 6px 6px 0 0 var(--b-ink);
+}
+.brutal .b-btn-outline:hover {
+  box-shadow: 9px 9px 0 0 var(--b-ink);
+}
+
+/* ---------- Marquee strip (philosophy chain: Collect -> Clean -> ...) ---------- */
+.brutal .b-marquee {
+  border-top: var(--b-border-thick) solid var(--b-ink);
+  border-bottom: var(--b-border-thick) solid var(--b-ink);
+  background: var(--b-ink);
+  color: var(--b-paper);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.brutal .b-marquee-track {
+  display: inline-flex;
+  animation: b-scroll 22s linear infinite;
+}
+@keyframes b-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ---------- Scroll-reveal: pure JS-selector marker, no CSS state of its own ----------
+   lib/useRevealOnScroll.ts applies/clears opacity+transform as inline styles, and only
+   on elements it catches before they're on screen - content is visible by default with
+   no dependency on JS running, which is what makes this safe on pages where some
+   .b-reveal elements might end up rendered after an async fetch. */
+
+/* ---------- Asymmetric grid helpers ---------- */
+.brutal .b-grid-skew {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 0;
+}
+@media (max-width: 900px) {
+  .brutal .b-grid-skew { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brutal .b-marquee-track { animation: none; }
+  .brutal .b-block, .brutal .b-btn { transition: none; }
+}

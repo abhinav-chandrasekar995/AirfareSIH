@@ -1,0 +1,60 @@
+name: Demo resilience (network-off e2e)
+
+# Build prompt Sec.33: the guided demo path must work with external network access
+# disabled. This job proves it in CI, not just as a claim in the docs.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  network-off-demo:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: timescale/timescaledb:2.17.2-pg16
+        env:
+          POSTGRES_USER: airfare
+          POSTGRES_PASSWORD: airfare
+          POSTGRES_DB: airfare_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U airfare"
+          --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    env:
+      DATABASE_URL: postgresql+asyncpg://airfare:airfare@localhost:5432/airfare_test
+      REDIS_URL: redis://localhost:6379/0
+      FORCE_DATA_MODE: REPLAY
+      COLLECTION_ENABLED: "false"
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      - name: Backend up
+        working-directory: backend
+        run: |
+          pip install -r requirements-dev.txt
+          alembic upgrade head
+          python -m seeds.load_seed
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          for i in $(seq 1 30); do curl -sf http://localhost:8000/health && break; sleep 1; done
+
+      - name: Frontend up
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          nohup npm run dev &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/home && break; sleep 1; done
+
+      - name: Run network-off demo path e2e
+        working-directory: frontend
+        run: npm run e2e -- tests/e2e/demo-network-off.spec.ts

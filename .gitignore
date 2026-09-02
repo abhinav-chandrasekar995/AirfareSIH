@@ -1,0 +1,45 @@
+# Environment / secrets
+.env
+.env.local
+*.env
+!.env.example
+!**/.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.import_linter_cache/
+.coverage
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+dist/
+next-env.d.ts.bak
+
+# Testing
+playwright-report/
+test-results/
+coverage/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local data
+backend/seeds/replay_dataset/*.db
+*.sqlite3

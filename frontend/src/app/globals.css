@@ -1,0 +1,56 @@
+@import "../styles/tokens.css";
+@import "../styles/brutal.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  * { border-color: var(--border-subtle); }
+  ::selection { background: var(--accent-300); color: var(--navy-950); }
+
+  /* Visible focus for keyboard nav (accessibility, non-negotiable). */
+  :focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  h1, h2, h3, h4 { font-family: var(--font-sans); font-weight: 800; color: var(--text-primary); letter-spacing: -0.015em; }
+  code, .mono { font-family: var(--font-mono); }
+}
+
+@layer components {
+  /* Hard-edged panel: matches the marketing site's brutalist block (raw border +
+     offset shadow) at a scale tuned for dense analytical grids rather than a hero
+     section - 3px border, 3px offset instead of marketing's 5px/8px. */
+  .panel {
+    background: var(--bg-panel);
+    border: var(--border-hard) solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-hard-sm);
+  }
+  .eyebrow {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--text-muted); font-family: var(--font-mono);
+  }
+  .skip-link {
+    position: absolute; left: -999px; top: 0; z-index: 100;
+    background: var(--interactive-primary); color: #fff; padding: 8px 16px;
+  }
+  .skip-link:focus { left: 8px; top: 8px; }
+
+  /* `.reveal` is a pure JS-selector marker for lib/useRevealOnScroll.ts - it carries NO
+     CSS of its own. The hook applies (and clears) opacity/transform as inline styles,
+     and only on elements it catches before they enter the viewport, so anything the
+     observer never reaches - e.g. a panel that doesn't exist yet because it's waiting
+     on a TanStack Query fetch - is never hidden in the first place. Content is visible
+     by default with zero dependency on JavaScript running correctly; motion is a
+     progressive enhancement on top, not a gate content has to pass through. */
+}

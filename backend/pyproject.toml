@@ -1,0 +1,40 @@
+[project]
+name = "airfare-intelligence-backend"
+version = "1.0.0"
+description = "India Airfare Intelligence - Real-Time Airfare Price Index & CPI Augmentation Platform"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+# The async DB engine (app/db/session.py) is a process-global singleton, so its asyncpg
+# connections are bound to whichever event loop was active when it was first created.
+# pytest-asyncio's default is a NEW event loop per test function, which invalidates
+# those connections on the very next test and produces intermittent "Event loop is
+# closed" / proactor teardown errors on Windows. Session-scoping the loop keeps one
+# event loop for the whole run, matching the engine's actual lifetime.
+asyncio_default_fixture_loop_scope = "session"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4"]
+# E501: line length is handled by formatting, not a lint gate.
+# B008: FastAPI's Depends()/Query() in a default argument is the required, documented
+# DI pattern for this framework - not the mutable-default-arg footgun B008 exists to
+# catch. Flagging every route handler would drown real findings in noise.
+ignore = ["E501", "B008"]
+
+# ADR-001 / Build prompt Sec.35: the analytics package must stay pure.
+# CI runs `lint-imports` against these contracts.
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "analytics must not depend on db, api, collection, services or tasks"
+type = "forbidden"
+source_modules = ["app.analytics"]
+forbidden_modules = ["app.db", "app.api", "app.collection", "app.services", "app.tasks", "app.middleware"]

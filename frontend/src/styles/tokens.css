@@ -1,0 +1,187 @@
+/*
+ * Design tokens - the single source of truth for colour, type and spacing.
+ *
+ * Reconciliation (see IMPLEMENTATION_LOG D-003/D-004):
+ *  - Typography: Fira Sans + Fira Code, per the ui-ux-pro-max skill recommendation for
+ *    analytics dashboards (self-hosted for offline demo).
+ *  - Colour: the doc's dark-first navy system with the domain-specific price-direction
+ *    semantic (rising fares = adverse red/amber, falling = benign green). The skill's
+ *    generic blue palette cannot express that inversion, but its accessibility
+ *    constraints (contrast 4.5:1, non-colour-only status) are adopted in full.
+ *  - Density 9/10, Motion 2/10, Variance 3/10, per the skill dials.
+ */
+
+:root {
+  /* Navy-slate neutral scale */
+  --navy-950: #070B18;
+  --navy-900: #0B1120;
+  --navy-850: #101828;
+  --navy-800: #16203A;
+  --navy-700: #1F2C4C;
+  --navy-600: #2C3D63;
+  --navy-500: #405582;
+  --navy-400: #6B80AB;
+  --navy-300: #9AACCB;
+  --navy-200: #C6D2E6;
+  --navy-100: #E4EAF4;
+  --navy-50:  #F4F7FC;
+  --white:    #FFFFFF;
+
+  --grey-700: #333B49;
+  --grey-500: #6B7480;
+  --grey-400: #939BA7;
+  --grey-300: #C3C9D2;
+  --grey-200: #E1E5EB;
+  --grey-100: #F1F3F7;
+
+  --accent-700: #2C3FB8;
+  --accent-600: #3B4FD8;
+  --accent-500: #5468F0;
+  --accent-400: #7C8BF5;
+  --accent-300: #A9B3F9;
+  --accent-100: #E5E8FE;
+  --violet-600: #6D4AE0;
+  --violet-400: #9B84EF;
+
+  /* Signal red - the marketing site's primary accent (styles/brutal.css --b-signal).
+     Reused here so the app's interactive colour matches the marketing brand rather
+     than sitting on a different blue accent (the "out of sync themes" fix). */
+  --signal-700: #CC2200;
+  --signal-600: #FF3B1F;
+  --signal-500: #FF5A3D;
+  --signal-100: #FFE2DC;
+  --amber-500: #FFB800;
+
+  /* Market direction primitives */
+  --up-700: #0B6E3F; --up-600: #0E8B4F; --up-400: #35B677; --up-100: #E3F5EC;
+  --down-700: #A11C2B; --down-600: #C82333; --down-400: #E2596A; --down-100: #FDE9EB;
+  --warn-700: #96650B; --warn-600: #C4870F; --warn-400: #E0AB4A; --warn-100: #FDF3E0;
+  --info-600: #0F7490; --info-100: #E2F3F8;
+
+  /* --- Semantic (light) --- */
+  --bg-app: var(--navy-50);
+  --bg-panel: var(--white);
+  --bg-panel-alt: var(--grey-100);
+  --bg-elevated: var(--white);
+  --bg-inset: var(--navy-50);
+
+  --text-primary: var(--navy-950);
+  --text-secondary: var(--grey-700);
+  --text-muted: var(--grey-500);
+  --text-inverse: var(--white);
+  --text-accent: var(--signal-600);
+
+  --border-subtle: var(--grey-200);
+  --border-strong: var(--navy-950);
+  --border-focus: var(--signal-600);
+
+  --interactive-primary: var(--signal-600);
+  --interactive-primary-hover: var(--signal-700);
+
+  /* Hard-edged surfaces (brutalist structure, dense-app tuned: smaller offsets than
+     the marketing site's 8px so KPI grids and panel rows don't crowd each other). */
+  --border-hard: 2px;
+  --border-hard-thick: 3px;
+  --shadow-hard-sm: 3px 3px 0 0 var(--border-strong);
+  --shadow-hard-md: 4px 4px 0 0 var(--border-strong);
+
+  /* Price direction: rising fares are adverse (red), falling benign (green). */
+  --price-up: var(--down-600);
+  --price-up-bg: var(--down-100);
+  --price-down: var(--up-600);
+  --price-down-bg: var(--up-100);
+  --price-flat: var(--grey-500);
+
+  --sev-critical: var(--down-700);
+  --sev-high: var(--down-600);
+  --sev-medium: var(--warn-600);
+  --sev-low: var(--info-600);
+
+  --quality-high: var(--up-600);
+  --quality-medium: var(--warn-600);
+  --quality-low: var(--down-600);
+
+  --mode-live: var(--up-600);
+  --mode-cached: var(--warn-600);
+  --mode-replay: var(--violet-600);
+
+  /* Chart series (colour-blind-safe, fixed assignments) */
+  --series-1: #3B4FD8; --series-2: #0E8B4F; --series-3: #C4870F; --series-4: #6D4AE0;
+  --series-5: #0F7490; --series-6: #C82333; --series-7: #7A5C3E; --series-8: #5E6773;
+
+  /* Type */
+  --font-sans: "Fira Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "Fira Code", "SF Mono", "Consolas", monospace;
+
+  /* Spacing (density 9/10) */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+
+  /* Sharp corners everywhere - the app now shares the marketing site's brutalist
+     structure (hard borders/offset shadows instead of soft rounded panels). */
+  --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(7,11,24,0.06);
+  --shadow-md: 0 2px 8px rgba(7,11,24,0.08);
+  --shadow-lg: 0 8px 24px rgba(7,11,24,0.12);
+
+  --dur-fast: 120ms; --dur-base: 200ms; --dur-slow: 400ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Dark is the default analyst view; toggled explicitly or via system preference. */
+:root[data-theme="dark"],
+:root.dark {
+  --bg-app: var(--navy-950);
+  --bg-panel: var(--navy-900);
+  --bg-panel-alt: var(--navy-850);
+  --bg-elevated: var(--navy-850);
+  --bg-inset: var(--navy-950);
+
+  --text-primary: var(--navy-100);
+  --text-secondary: var(--navy-300);
+  --text-muted: var(--navy-400);
+  --text-accent: var(--signal-500);
+
+  --border-subtle: var(--navy-800);
+  --border-strong: var(--navy-100);
+  --border-focus: var(--signal-500);
+  --interactive-primary: var(--signal-600);
+  --interactive-primary-hover: var(--signal-500);
+
+  --price-up: var(--down-400);
+  --price-up-bg: rgba(200,35,51,0.16);
+  --price-down: var(--up-400);
+  --price-down-bg: rgba(14,139,79,0.16);
+  --sev-high: var(--down-400);
+  --quality-high: var(--up-400);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-app: var(--navy-950);
+    --bg-panel: var(--navy-900);
+    --bg-panel-alt: var(--navy-850);
+    --bg-elevated: var(--navy-850);
+    --bg-inset: var(--navy-950);
+    --text-primary: var(--navy-100);
+    --text-secondary: var(--navy-300);
+    --text-muted: var(--navy-400);
+    --text-accent: var(--signal-500);
+    --border-subtle: var(--navy-800);
+    --border-strong: var(--navy-100);
+    --border-focus: var(--signal-500);
+    --interactive-primary: var(--signal-600);
+    --interactive-primary-hover: var(--signal-500);
+    --price-up: var(--down-400);
+    --price-up-bg: rgba(200,35,51,0.16);
+    --price-down: var(--up-400);
+    --price-down-bg: rgba(14,139,79,0.16);
+  }
+}
+
+.numeric { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
