@@ -52,6 +52,21 @@ jobs:
           python -m seeds.load_seed | tee /tmp/seed_output.txt
           echo "TEST_ADMIN_API_KEY=$(grep -oP '(?<=ADMIN    )\S+' /tmp/seed_output.txt)" >> "$GITHUB_ENV"
           echo "TEST_PUBLIC_API_KEY=$(grep -oP '(?<=PUBLIC   )\S+' /tmp/seed_output.txt)" >> "$GITHUB_ENV"
+      - name: DIAGNOSTIC - inspect RLS state directly via psql (temporary, remove after D-084)
+        run: |
+          export PGPASSWORD=airfare
+          echo "--- relrowsecurity / relforcerowsecurity / owner ---"
+          psql -h localhost -U airfare -d airfare_test -c "SELECT relname, relrowsecurity, relforcerowsecurity, relowner::regrole FROM pg_class WHERE relname IN ('api_keys','audit_log');"
+          echo "--- policies ---"
+          psql -h localhost -U airfare -d airfare_test -c "SELECT tablename, policyname, permissive, roles, cmd FROM pg_policies WHERE tablename IN ('api_keys','audit_log');"
+          echo "--- current_user / session_user ---"
+          psql -h localhost -U airfare -d airfare_test -c "SELECT current_user, session_user;"
+          echo "--- PUBLIC role via raw psql, should be 0 ---"
+          psql -h localhost -U airfare -d airfare_test -c "SET app.role='PUBLIC'; SELECT count(*) FROM api_keys;"
+          echo "--- no role set at all via raw psql, should be 0 ---"
+          psql -h localhost -U airfare -d airfare_test -c "SELECT count(*) FROM api_keys;"
+          echo "--- ADMIN role via raw psql, for context (real total row count) ---"
+          psql -h localhost -U airfare -d airfare_test -c "SET app.role='ADMIN'; SELECT count(*) FROM api_keys;"
       - name: Run tests
         working-directory: backend
         run: pytest -q --cov=app --cov-report=term-missing
