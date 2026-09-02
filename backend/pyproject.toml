@@ -13,7 +13,19 @@ asyncio_mode = "auto"
 # those connections on the very next test and produces intermittent "Event loop is
 # closed" / proactor teardown errors on Windows. Session-scoping the loop keeps one
 # event loop for the whole run, matching the engine's actual lifetime.
+#
+# `asyncio_default_fixture_loop_scope` alone only session-scopes the loop used for async
+# FIXTURES - pytest-asyncio 0.24+ separately defaults the loop used to run TEST FUNCTION
+# BODIES to function-scope regardless, so the engine's connections (created once, bound
+# to whatever loop was active then) still got handed to a fresh, different loop on every
+# later test. That's what "attached to a different loop" actually means, and it is not
+# Windows-specific despite this comment previously saying so - it surfaced on ubuntu-24
+# CI too, just less reliably than on Windows' stricter ProactorEventLoop, which is why
+# every prior "all tests pass locally" claim in this project's history was true and
+# incomplete at the same time. Setting both scopes to "session" is the actual fix the
+# original comment already intended.
 asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]
