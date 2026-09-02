@@ -52,6 +52,10 @@ jobs:
           python -m seeds.load_seed | tee /tmp/seed_output.txt
           echo "TEST_ADMIN_API_KEY=$(grep -oP '(?<=ADMIN    )\S+' /tmp/seed_output.txt)" >> "$GITHUB_ENV"
           echo "TEST_PUBLIC_API_KEY=$(grep -oP '(?<=PUBLIC   )\S+' /tmp/seed_output.txt)" >> "$GITHUB_ENV"
+      - name: Strip superuser from the CI role (RLS cannot be bypassed in production/Supabase; the official postgres Docker image grants POSTGRES_USER superuser by default, which this app's role must never have - see db/rls.py)
+        run: |
+          export PGPASSWORD=airfare
+          psql -h localhost -U airfare -d airfare_test -c "ALTER ROLE airfare WITH NOSUPERUSER NOBYPASSRLS;"
       - name: DIAGNOSTIC - inspect RLS state directly via psql (temporary, remove after D-084)
         run: |
           export PGPASSWORD=airfare
