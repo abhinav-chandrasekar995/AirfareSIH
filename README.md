@@ -20,11 +20,18 @@ Full requirements, architecture and design rationale live in [`doc/`](doc/) and 
 
 ## Quick start — portable local (recommended, works offline)
 
-Requires Docker.
+Download docker desktop
+Restart system 
+Run docker desktop 
 
 ```bash
 cp .env.example .env
 docker compose up --build
+```
+
+for later runs, 
+```bash
+docker compose up -d
 ```
 
 This brings up Postgres (TimescaleDB image), Redis, the API, workers, and the frontend, runs migrations, and **loads a deterministic 120k-observation seed dataset** automatically. Open:
