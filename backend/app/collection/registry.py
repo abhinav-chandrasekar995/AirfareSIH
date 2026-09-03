@@ -1,6 +1,9 @@
 """Adapter registry: source_code -> adapter class."""
 from __future__ import annotations
 
+from app.collection.adapters.aggregators.google_flights_serpapi_adapter import (
+    GoogleFlightsSerpApiAdapter,
+)
 from app.collection.adapters.airlines.air_india_adapter import AirIndiaAdapter
 from app.collection.adapters.airlines.air_india_express_adapter import AirIndiaExpressAdapter
 from app.collection.adapters.airlines.akasa_adapter import AkasaAdapter
@@ -28,14 +31,20 @@ ADAPTERS: dict[str, type[BaseSourceAdapter]] = {
         CleartripAdapter,
         EaseMyTripAdapter,
         IxigoAdapter,
+        GoogleFlightsSerpApiAdapter,
     )
 }
 
 # Fallback order used when a source goes down: airline-direct first, since a direct
 # quote is the fare a traveller actually faces without OTA markup (build prompt Sec.3).
+# google_flights (SerpApi, an authorized aggregator API, not a scraped site) sits last -
+# not because it's least trustworthy, but because it's an aggregate view rather than a
+# single traveller-facing quote; in practice, as of this basket's own robots.txt
+# findings, it is also the fallback most likely to actually succeed.
 FALLBACK_ORDER = [
     "indigo", "airindia", "akasa", "spicejet", "airindiaexpress",
     "makemytrip", "goibibo", "cleartrip", "yatra", "easemytrip", "ixigo",
+    "google_flights",
 ]
 
 

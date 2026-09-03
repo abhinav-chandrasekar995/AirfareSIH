@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     default_source_rate_limit_rpm: int = 20
     collection_enabled: bool = False  # off by default; demo runs on seeded data
 
+    # SerpApi (Google Flights engine) - authorized third-party API, not scraping. See
+    # IMPLEMENTATION_LOG.md for why this exists alongside the (largely robots.txt-
+    # blocked) airline/OTA adapters. None means the adapter fails closed, not silently.
+    serpapi_key: str | None = None
+
     CPI_DISCLAIMER: str = (
         "This module is a simulation for analytical demonstration. It does not "
         "represent an official CPI revision or official NSO methodology."

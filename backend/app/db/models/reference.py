@@ -116,7 +116,9 @@ class Source(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        CheckConstraint("source_type IN ('AIRLINE_DIRECT','OTA')", name="chk_source_type"),
+        CheckConstraint(
+            "source_type IN ('AIRLINE_DIRECT','OTA','AGGREGATOR')", name="chk_source_type"
+        ),
         CheckConstraint(
             "status IN ('ACTIVE','DEGRADED','UNAVAILABLE','DISABLED')", name="chk_source_status"
         ),

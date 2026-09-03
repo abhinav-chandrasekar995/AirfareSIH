@@ -14,6 +14,8 @@ class Region(StrEnum):
 class SourceType(StrEnum):
     AIRLINE_DIRECT = "AIRLINE_DIRECT"
     OTA = "OTA"
+    AGGREGATOR = "AGGREGATOR"  # third-party API (e.g. SerpApi/Google Flights) - not a
+    # scraped site of its own; authorized API access, distinct from the other two.
 
 
 class SourceStatus(StrEnum):
