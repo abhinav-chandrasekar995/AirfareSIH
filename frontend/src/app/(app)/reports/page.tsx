@@ -34,6 +34,12 @@ const REPORT_TYPES = [
     path: "/reports/cpi-scenario",
     needsRoute: false,
   },
+  {
+    name: "RBI Policy Brief",
+    desc: "Core vs Headline APIx, price breakdown, and current inflation alert status.",
+    path: "/reports/rbi-policy-brief",
+    needsRoute: false,
+  },
 ];
 
 export default function ReportsPage() {

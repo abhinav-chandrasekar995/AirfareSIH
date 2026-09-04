@@ -13,7 +13,7 @@ from app.api.v1.schemas.envelope import envelope
 from app.core.exceptions import NotFoundError
 from app.db.repositories import analytics_repository as analytics_repo
 from app.db.session import get_session
-from app.services import analytics_service, dashboard_service
+from app.services import analytics_service, dashboard_service, mospi_service
 
 dashboard_router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 routes_router = APIRouter(prefix="/routes", tags=["routes"])
@@ -144,6 +144,20 @@ async def get_backtest(
     data = await analytics_service.get_backtest(session, backtest_id)
     if data is None:
         raise NotFoundError("no back-test run is available")
+    return envelope(data, meta=ctx.meta())
+
+
+@backtest_router.get(
+    "/mospi-comparison",
+    summary="Our Headline APIx vs the real MoSPI Airfare CPI, rebased and validated over the real overlap",
+)
+async def get_mospi_comparison(
+    session: AsyncSession = Depends(get_session),
+    ctx: ResponseContext = Depends(get_context),
+) -> dict:
+    data = await mospi_service.get_mospi_comparison(session)
+    if data is None:
+        raise NotFoundError("no MoSPI CPI reference data has been ingested")
     return envelope(data, meta=ctx.meta())
 
 

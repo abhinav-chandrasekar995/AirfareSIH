@@ -3,7 +3,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { PanelShell } from "@/components/panels/PanelShell";
 import { EmptyState, ErrorState, Skeleton } from "@/components/panels/EmptyState";
 import { ForecastChart } from "@/components/charts/ForecastChart";
-import { ModelComparisonTable } from "@/components/tables/ModelComparisonTable";
 import { useForecast } from "@/lib/api/hooks";
 import { inr } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -37,15 +36,6 @@ export default function ForecastPage() {
                 <div className="text-[11px] text-muted mt-3">Model: {data.data.model_name} ({data.data.model_version})</div>
                 <div className="text-[11px] text-muted">Confidence level: {(data.data.confidence_level * 100).toFixed(0)}%</div>
               </div>
-            </PanelShell>
-          </div>
-          <div className="lg:col-span-12">
-            <PanelShell title="Model Comparison" subtitle="Walk-forward validation" source="forecasting model registry">
-              {data.data.model_comparison.length > 0 ? (
-                <ModelComparisonTable models={data.data.model_comparison} />
-              ) : (
-                <EmptyState title="Model comparison unavailable" message="Only the selected model is stored for this run." />
-              )}
             </PanelShell>
           </div>
         </div>

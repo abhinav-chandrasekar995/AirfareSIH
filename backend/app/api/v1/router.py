@@ -1,11 +1,12 @@
 """Aggregates every v1 router."""
 from fastapi import APIRouter
 
-from app.api.v1.routers import admin, analytics, fares, index, reports
+from app.api.v1.routers import admin, analytics, apix, fares, index, reports
 
 api_router = APIRouter(prefix="/api/v1")
 
 api_router.include_router(index.router)
+api_router.include_router(apix.router)
 api_router.include_router(fares.router)
 api_router.include_router(analytics.dashboard_router)
 api_router.include_router(analytics.routes_router)

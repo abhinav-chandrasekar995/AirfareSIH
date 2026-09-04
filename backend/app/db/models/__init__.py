@@ -2,6 +2,7 @@
 from app.db.models.derived import (
     Anomaly,
     BacktestRun,
+    CoreIndexValue,
     CpiSimulation,
     Forecast,
     IndexValue,
@@ -26,7 +27,7 @@ __all__ = [
     "Airport", "Airline", "Route", "RouteWeight", "Source", "Event",
     "DgcaBenchmark", "CpiReference", "MethodologyVersion",
     "FareObservationRaw", "FareObservation",
-    "IndexValue", "LeadTimeCurve", "VolatilityMetric", "Anomaly",
+    "IndexValue", "CoreIndexValue", "LeadTimeCurve", "VolatilityMetric", "Anomaly",
     "Forecast", "BacktestRun", "CpiSimulation",
     "ScrapeRun", "DataQualityFlag", "ApiKey", "AuditLog",
 ]

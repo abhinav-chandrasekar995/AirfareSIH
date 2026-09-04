@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.db.session import get_session
-from app.services import analytics_service, dashboard_service, index_service
+from app.services import analytics_service, apix_service, dashboard_service, index_service
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -188,3 +188,45 @@ async def report_cpi_scenario(
         rows.append([s["weight_pct"], s["augmented_index"], s["delta"]])
 
     return _csv_response("cpi_augmentation_scenario_note.csv", header, rows)
+
+
+@router.get("/rbi-policy-brief", summary="RBI Policy Brief - Core APIx inflation snapshot")
+async def report_rbi_policy_brief(session: AsyncSession = Depends(get_session)):
+    """One-page brief for the RBI inflation-alert scenario: current alert status, the
+    Core vs Headline split, and the price breakdown behind it. Assembled from the exact
+    same apix_service functions the /apix/* endpoints and dashboard call - see
+    RBI_APIX_MODULE_LOG.md."""
+    alert = await apix_service.get_alert_status(session)
+    breakdown = await apix_service.get_price_breakdown(session)
+    comparison = await apix_service.get_comparison(session)
+
+    core_latest = comparison["core"][-1] if comparison["core"] else None
+    headline_latest = comparison["headline"][-1] if comparison["headline"] else None
+
+    header = ["Field", "Value"]
+    rows = [
+        ["Report", "RBI Policy Brief"],
+        ["Generated at", datetime.now(UTC).isoformat()],
+        ["As of", alert.get("as_of")],
+        [],
+        ["Alert Status", alert.get("status")],
+        ["Triggered", alert.get("triggered")],
+        ["National Core APIx WoW (%)", alert.get("national_wow_pct")],
+        ["National tolerance band (%)", alert.get("national_threshold_pct")],
+        ["Spiking route", alert.get("spiking_route")],
+        ["Spiking route WoW (%)", alert.get("spiking_route_wow_pct")],
+        ["Route tolerance band (%)", alert.get("route_threshold_pct")],
+        ["Message", alert.get("message")],
+        [],
+        ["Core APIx (base fare, national)", core_latest["index_value"] if core_latest else None],
+        ["Headline APIx (total fare, national)", headline_latest["index_value"] if headline_latest else None],
+    ]
+    if breakdown:
+        rows.append([])
+        rows.append(["Price Breakdown", f"as of {breakdown['as_of']}"])
+        rows.append(["Avg base fare", breakdown["avg_base_fare"]])
+        rows.append(["Avg taxes & fees", breakdown["avg_taxes_and_fees"]])
+        rows.append(["Avg total fare", breakdown["avg_total_fare"]])
+        rows.append(["Observations", breakdown["n_observations"]])
+
+    return _csv_response("rbi_policy_brief.csv", header, rows)

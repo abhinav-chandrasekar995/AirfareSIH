@@ -7,6 +7,7 @@ from app.analytics.backtest.metrics import (
     mape,
     rmse,
 )
+from app.analytics.backtest.mospi_alignment import NoOverlapError, rebase_to_official
 
 __all__ = [
     "mae",
@@ -18,4 +19,6 @@ __all__ = [
     "align_series",
     "to_monthly",
     "ALIGNMENT_METHOD",
+    "rebase_to_official",
+    "NoOverlapError",
 ]

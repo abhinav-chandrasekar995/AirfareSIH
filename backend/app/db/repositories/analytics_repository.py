@@ -183,6 +183,15 @@ async def cpi_vintages(session: AsyncSession) -> list[str]:
     return list((await session.execute(stmt)).scalars())
 
 
+async def cpi_series(session: AsyncSession, vintage: str) -> list[CpiReference]:
+    stmt = (
+        select(CpiReference)
+        .where(CpiReference.series_vintage == vintage)
+        .order_by(CpiReference.period_month)
+    )
+    return list((await session.execute(stmt)).scalars())
+
+
 # ----------------------------------------------------------------- collection health
 
 

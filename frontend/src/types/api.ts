@@ -9,6 +9,37 @@ export interface IndexPoint {
   n_observations: number; estimator: string; weight: number | null; notes: string | null;
 }
 
+// RBI APIx module (/api/v1/apix/*) - narrower point shape than IndexPoint since
+// apix_service._to_point() doesn't carry estimator/weight/notes. See RBI_APIX_MODULE_LOG.md.
+export interface ApixPoint {
+  date: string; level: string; scope: string; index_value: number; n_observations: number;
+}
+
+export interface ApixComparison {
+  core: ApixPoint[];
+  headline: ApixPoint[];
+}
+
+export interface PriceBreakdown {
+  as_of: string;
+  avg_base_fare: number | null;
+  avg_taxes_and_fees: number | null;
+  avg_total_fare: number | null;
+  n_observations: number;
+}
+
+export interface ApixAlert {
+  triggered: boolean;
+  status: string;
+  national_wow_pct: number | null;
+  national_threshold_pct: number;
+  spiking_route: string | null;
+  spiking_route_wow_pct: number | null;
+  route_threshold_pct: number;
+  message: string | null;
+  as_of: string | null;
+}
+
 export interface IndexSummary {
   scope: string; level: string; current_value: number; previous_value: number | null;
   change_pct: number | null; change_direction: string; base_period: string;
@@ -104,6 +135,24 @@ export interface Backtest {
   correlation: number | null; directional_accuracy: number | null;
   dgca_vintage: string; alignment_method: string;
   series: { month: string; ours: number; dgca: number }[];
+}
+
+export interface MospiComparisonPoint {
+  month: string; official_index: number | null; nowcast_index: number; is_official: boolean;
+}
+
+// Real MoSPI Airfare CPI vs our own rebased Headline APIx - genuinely independent
+// benchmark, unlike Backtest above (whose "dgca" series is synthetic). See
+// backend/app/services/mospi_service.py and IMPLEMENTATION_LOG.md.
+export interface MospiComparison {
+  series_vintage: string; base_year: string; anchor_month: string; scale_factor: number;
+  alignment_method: string;
+  points: MospiComparisonPoint[];
+  overlap_months: number;
+  overlap_metrics: {
+    mae: number; rmse: number; mape: number; correlation: number; directional_accuracy: number;
+  } | null;
+  last_official_month: string; latest_nowcast_month: string | null; data_lag_days: number;
 }
 
 export interface CpiSimulation {

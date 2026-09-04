@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, TrendingUp, Plane, AlertTriangle, CalendarClock, Calculator,
-  LineChart, Database, RadioTower, Plug, FileText, Settings, ChevronLeft,
+  LineChart, Database, RadioTower, Plug, FileText, Settings, ChevronLeft, Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -17,6 +17,7 @@ const NAV = [
   { href: "/forecast", label: "Forecast", icon: LineChart },
   { href: "/backtesting", label: "Backtesting", icon: LineChart },
   { href: "/cpi-simulator", label: "CPI Simulator", icon: Calculator },
+  { href: "/rbi-policy", label: "RBI Policy", icon: Landmark },
   { href: "/data-explorer", label: "Data Explorer", icon: Database },
   { href: "/collection", label: "Collection", icon: RadioTower },
   { href: "/api-portal", label: "API Portal", icon: Plug },

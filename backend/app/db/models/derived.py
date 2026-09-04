@@ -58,6 +58,41 @@ class IndexValue(Base):
     notes: Mapped[str | None] = mapped_column(Text)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+
+class CoreIndexValue(Base):
+    """The base-fare-only companion to IndexValue - RBI/NSO monetary-policy literature
+    distinguishes "core" (demand-driven, excludes volatile pass-through components) from
+    "headline" (all-in, what a consumer actually pays) inflation; IndexValue (computed
+    from total_fare) is the headline series, this is core. Deliberately a separate table
+    rather than a new column/flag on IndexValue: additive only, so the existing,
+    DGCA-backtested Headline series is never at risk of being touched by this addition.
+    See RBI_APIX_MODULE_LOG.md.
+
+    Identical shape to IndexValue on purpose - same repository/service patterns apply to
+    both with the fare basis as the only real difference."""
+
+    __tablename__ = "core_index_values"
+
+    index_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    level: Mapped[str] = mapped_column(String(20), nullable=False)
+    scope: Mapped[str] = mapped_column(String(20), nullable=False)
+    index_value: Mapped[float] = mapped_column(Numeric(8, 3), nullable=False)
+    base_period: Mapped[date] = mapped_column(Date, nullable=False)
+    weight: Mapped[float | None] = mapped_column(Numeric(6, 4))
+
+    estimator: Mapped[str] = mapped_column(String(20), nullable=False)
+    mean_fare: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    median_fare: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    trimmed_mean_fare: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    weighted_median_fare: Mapped[float | None] = mapped_column(Numeric(10, 2))
+
+    n_observations: Mapped[int] = mapped_column(Integer, nullable=False)
+    weight_set_version: Mapped[str | None] = mapped_column(String(30))
+    methodology_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
     __table_args__ = (
         UniqueConstraint("date", "level", "scope", "methodology_version", name="uq_index_value"),
         CheckConstraint(

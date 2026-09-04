@@ -2,8 +2,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, type Envelope } from "./client";
 import type {
-  Airline, Anomaly, Backtest, CpiSimulation, Dashboard, DataQuality, Forecast, IndexPoint,
-  IndexSummary, LeadTime, Methodology, RouteDetail, RouteSummary, Volatility, FareObservation,
+  Airline, Anomaly, ApixAlert, ApixComparison, Backtest, CpiSimulation, Dashboard, DataQuality,
+  Forecast, IndexPoint, IndexSummary, LeadTime, Methodology, MospiComparison, PriceBreakdown,
+  RouteDetail, RouteSummary, Volatility, FareObservation,
 } from "@/types/api";
 
 const STALE = 60_000;
@@ -69,6 +70,14 @@ export function useBacktest() {
   return useQuery({ queryKey: ["backtest"], queryFn: () => apiGet<Backtest>("/backtest"), staleTime: STALE });
 }
 
+export function useMospiComparison() {
+  return useQuery({
+    queryKey: ["mospi-comparison"],
+    queryFn: () => apiGet<MospiComparison>("/backtest/mospi-comparison"),
+    staleTime: STALE,
+  });
+}
+
 export function useCpiSimulation(weight?: number, vintage?: string) {
   return useQuery({
     queryKey: ["cpi", weight, vintage],
@@ -87,6 +96,35 @@ export function useDataQuality() {
 
 export function useFares(params: Record<string, string | number | undefined> = {}) {
   return useQuery({ queryKey: ["fares", params], queryFn: () => apiGet<FareObservation[]>("/fares", params), staleTime: STALE });
+}
+
+// RBI APIx module - shorter staleTime than STALE (30s vs 60s) since the alert banner
+// is the one thing on the site meant to feel "live."
+const APIX_STALE = 30_000;
+
+export function useApixComparison(level = "NATIONAL", scope?: string) {
+  return useQuery({
+    queryKey: ["apix-comparison", level, scope],
+    queryFn: () => apiGet<ApixComparison>("/apix/comparison", { level, scope }),
+    staleTime: APIX_STALE,
+  });
+}
+
+export function usePriceBreakdown() {
+  return useQuery({
+    queryKey: ["apix-price-breakdown"],
+    queryFn: () => apiGet<PriceBreakdown>("/apix/price-breakdown"),
+    staleTime: APIX_STALE,
+  });
+}
+
+export function useApixAlert() {
+  return useQuery({
+    queryKey: ["apix-alert"],
+    queryFn: () => apiGet<ApixAlert>("/apix/alert"),
+    staleTime: APIX_STALE,
+    refetchInterval: APIX_STALE,
+  });
 }
 
 export type { Envelope };
