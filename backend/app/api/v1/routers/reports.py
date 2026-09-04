@@ -19,6 +19,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
+from app.core.constants import IndexLevel
 from app.db.session import get_session
 from app.services import analytics_service, apix_service, dashboard_service, index_service
 
@@ -191,14 +192,18 @@ async def report_cpi_scenario(
 
 
 @router.get("/rbi-policy-brief", summary="RBI Policy Brief - Core APIx inflation snapshot")
-async def report_rbi_policy_brief(session: AsyncSession = Depends(get_session)):
+async def report_rbi_policy_brief(
+    level: IndexLevel = Query(default=IndexLevel.NATIONAL),
+    scope: str | None = Query(default=None, description="Route code when level=ROUTE"),
+    session: AsyncSession = Depends(get_session),
+):
     """One-page brief for the RBI inflation-alert scenario: current alert status, the
     Core vs Headline split, and the price breakdown behind it. Assembled from the exact
     same apix_service functions the /apix/* endpoints and dashboard call - see
     RBI_APIX_MODULE_LOG.md."""
-    alert = await apix_service.get_alert_status(session)
-    breakdown = await apix_service.get_price_breakdown(session)
-    comparison = await apix_service.get_comparison(session)
+    alert = await apix_service.get_alert_status(session, level, scope)
+    breakdown = await apix_service.get_price_breakdown(session, level, scope)
+    comparison = await apix_service.get_comparison(session, level, scope)
 
     core_latest = comparison["core"][-1] if comparison["core"] else None
     headline_latest = comparison["headline"][-1] if comparison["headline"] else None
@@ -211,15 +216,15 @@ async def report_rbi_policy_brief(session: AsyncSession = Depends(get_session)):
         [],
         ["Alert Status", alert.get("status")],
         ["Triggered", alert.get("triggered")],
-        ["National Core APIx WoW (%)", alert.get("national_wow_pct")],
-        ["National tolerance band (%)", alert.get("national_threshold_pct")],
+        [f"{alert.get('scope')} Core APIx WoW (%)", alert.get("scope_wow_pct")],
+        ["Selected-scope alert threshold (%)", alert.get("scope_threshold_pct")],
         ["Spiking route", alert.get("spiking_route")],
         ["Spiking route WoW (%)", alert.get("spiking_route_wow_pct")],
         ["Route tolerance band (%)", alert.get("route_threshold_pct")],
         ["Message", alert.get("message")],
         [],
-        ["Core APIx (base fare, national)", core_latest["index_value"] if core_latest else None],
-        ["Headline APIx (total fare, national)", headline_latest["index_value"] if headline_latest else None],
+        [f"Core APIx (base fare, {alert.get('scope')})", core_latest["index_value"] if core_latest else None],
+        [f"Headline APIx (total fare, {alert.get('scope')})", headline_latest["index_value"] if headline_latest else None],
     ]
     if breakdown:
         rows.append([])

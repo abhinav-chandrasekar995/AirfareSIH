@@ -21,6 +21,8 @@ export interface ApixComparison {
 }
 
 export interface PriceBreakdown {
+  scope: string;
+  scope_level: string;
   as_of: string;
   avg_base_fare: number | null;
   avg_taxes_and_fees: number | null;
@@ -31,6 +33,10 @@ export interface PriceBreakdown {
 export interface ApixAlert {
   triggered: boolean;
   status: string;
+  scope: string;
+  scope_level: string;
+  scope_wow_pct: number | null;
+  scope_threshold_pct: number;
   national_wow_pct: number | null;
   national_threshold_pct: number;
   spiking_route: string | null;

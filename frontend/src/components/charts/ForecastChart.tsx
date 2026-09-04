@@ -1,7 +1,7 @@
 "use client";
 import { ChartFrame } from "./ChartFrame";
 import { seriesColors } from "@/lib/charts/theme";
-import { istDate, inr } from "@/lib/format";
+import { istDate, num } from "@/lib/format";
 import type { ForecastPoint } from "@/types/api";
 
 // A point forecast must never render alone (build prompt Sec.17). `points` here always
@@ -18,7 +18,7 @@ export function ForecastChart({ points }: { points: ForecastPoint[] }) {
 
   const option = {
     xAxis: { type: "category", data: dates },
-    yAxis: { type: "value", scale: true, axisLabel: { formatter: (v: number) => `₹${(v / 1000).toFixed(1)}k` } },
+    yAxis: { type: "value", scale: true, name: "APIx index", nameTextStyle: { fontSize: 10 }, axisLabel: { formatter: (v: number) => num(v, 0) } },
     series: [
       { name: "Lower bound", type: "line", data: lower, symbol: "none", lineStyle: { opacity: 0 }, stack: "band" },
       {
@@ -35,7 +35,7 @@ export function ForecastChart({ points }: { points: ForecastPoint[] }) {
       formatter: (params: any[]) => {
         const p = points[params[0]?.dataIndex ?? 0];
         if (!p) return "";
-        return `${istDate(p.forecast_date)}<br/>Prediction: ${inr(p.prediction)}<br/>Range: ${inr(p.lower_bound)} – ${inr(p.upper_bound)}`;
+        return `${istDate(p.forecast_date)}<br/>Prediction: ${num(p.prediction, 2)} APIx<br/>Range: ${num(p.lower_bound, 2)} – ${num(p.upper_bound, 2)}`;
       },
     },
   };
@@ -45,10 +45,10 @@ export function ForecastChart({ points }: { points: ForecastPoint[] }) {
       option={option}
       height={280}
       ariaLabel="Forecast with prediction interval"
-      summary={`Forecast over ${points.length} days, prediction interval width from ${inr(Math.min(...bandHeight))} to ${inr(Math.max(...bandHeight))}.`}
+      summary={`Forecast over ${points.length} days, prediction interval width from ${num(Math.min(...bandHeight), 2)} to ${num(Math.max(...bandHeight), 2)} APIx points.`}
       tableData={{
         columns: ["Date", "Prediction", "Lower", "Upper"],
-        rows: points.map((p) => [istDate(p.forecast_date), inr(p.prediction), inr(p.lower_bound), inr(p.upper_bound)]),
+        rows: points.map((p) => [istDate(p.forecast_date), num(p.prediction, 2), num(p.lower_bound, 2), num(p.upper_bound, 2)]),
       }}
     />
   );

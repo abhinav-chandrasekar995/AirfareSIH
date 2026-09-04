@@ -110,18 +110,18 @@ export function useApixComparison(level = "NATIONAL", scope?: string) {
   });
 }
 
-export function usePriceBreakdown() {
+export function usePriceBreakdown(level = "NATIONAL", scope?: string) {
   return useQuery({
-    queryKey: ["apix-price-breakdown"],
-    queryFn: () => apiGet<PriceBreakdown>("/apix/price-breakdown"),
+    queryKey: ["apix-price-breakdown", level, scope],
+    queryFn: () => apiGet<PriceBreakdown>("/apix/price-breakdown", { level, scope }),
     staleTime: APIX_STALE,
   });
 }
 
-export function useApixAlert() {
+export function useApixAlert(level = "NATIONAL", scope?: string) {
   return useQuery({
-    queryKey: ["apix-alert"],
-    queryFn: () => apiGet<ApixAlert>("/apix/alert"),
+    queryKey: ["apix-alert", level, scope],
+    queryFn: () => apiGet<ApixAlert>("/apix/alert", { level, scope }),
     staleTime: APIX_STALE,
     refetchInterval: APIX_STALE,
   });

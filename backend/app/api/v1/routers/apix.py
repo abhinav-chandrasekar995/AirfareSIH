@@ -45,17 +45,21 @@ async def get_comparison(
 
 @router.get("/price-breakdown", summary="Average base fare / taxes & fees / total fare, most recent day")
 async def get_price_breakdown(
+    level: IndexLevel = Query(default=IndexLevel.NATIONAL),
+    scope: str | None = Query(default=None, description="Route code when level=ROUTE"),
     session: AsyncSession = Depends(get_session),
     ctx: ResponseContext = Depends(get_context),
 ) -> dict:
-    data = await apix_service.get_price_breakdown(session)
+    data = await apix_service.get_price_breakdown(session, level, scope)
     return envelope(data, meta=ctx.meta())
 
 
 @router.get("/alert", summary="Week-over-week Core APIx inflation alert status")
 async def get_alert(
+    level: IndexLevel = Query(default=IndexLevel.NATIONAL),
+    scope: str | None = Query(default=None, description="Route code when level=ROUTE"),
     session: AsyncSession = Depends(get_session),
     ctx: ResponseContext = Depends(get_context),
 ) -> dict:
-    data = await apix_service.get_alert_status(session)
+    data = await apix_service.get_alert_status(session, level, scope)
     return envelope(data, meta=ctx.meta())

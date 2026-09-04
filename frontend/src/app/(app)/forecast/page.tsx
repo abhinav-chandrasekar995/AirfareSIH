@@ -4,7 +4,7 @@ import { PanelShell } from "@/components/panels/PanelShell";
 import { EmptyState, ErrorState, Skeleton } from "@/components/panels/EmptyState";
 import { ForecastChart } from "@/components/charts/ForecastChart";
 import { useForecast } from "@/lib/api/hooks";
-import { inr } from "@/lib/format";
+import { num } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const BAND_COLOR: Record<string, string> = { HIGH: "text-sev-high", MEDIUM: "text-sev-medium", LOW: "text-sev-low" };
@@ -14,7 +14,7 @@ export default function ForecastPage() {
 
   return (
     <div>
-      <PageHeader title="Forecasting" subtitle="14-day ahead national airfare index, with prediction intervals" />
+      <PageHeader title="Forecasting" subtitle="14-day ahead national APIx index, with prediction intervals" />
 
       {isLoading ? (
         <Skeleton className="h-96" />
@@ -31,8 +31,8 @@ export default function ForecastPage() {
             <PanelShell title="Expected Airfare Pressure" source={`model: ${data.data.model_name}`}>
               <div className="text-center py-4">
                 <div className={cn("text-3xl font-bold tracking-wide", BAND_COLOR[data.data.pressure_band])}>{data.data.pressure_band}</div>
-                <div className="text-xs text-muted mt-2">Forecast range</div>
-                <div className="text-sm numeric font-medium mt-1">{inr(data.data.forecast_range[0])} – {inr(data.data.forecast_range[1])}</div>
+                <div className="text-xs text-muted mt-2">Forecast APIx range</div>
+                <div className="text-sm numeric font-medium mt-1">{num(data.data.forecast_range[0], 2)} – {num(data.data.forecast_range[1], 2)}</div>
                 <div className="text-[11px] text-muted mt-3">Model: {data.data.model_name} ({data.data.model_version})</div>
                 <div className="text-[11px] text-muted">Confidence level: {(data.data.confidence_level * 100).toFixed(0)}%</div>
               </div>

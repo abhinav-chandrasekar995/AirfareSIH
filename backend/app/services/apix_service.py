@@ -55,28 +55,48 @@ async def get_comparison(
     }
 
 
-async def get_price_breakdown(session: AsyncSession) -> dict | None:
-    """Average base fare / taxes+fees / total fare, from the most recent date that has
-    any observations at all - "current", not a fixed historical window."""
+async def get_price_breakdown(
+    session: AsyncSession,
+    level: IndexLevel = IndexLevel.NATIONAL,
+    scope: str | None = None,
+) -> dict | None:
+    """Average fare components for the latest date in the selected scope."""
+    route_filter = ""
+    params: dict = {}
+    if level == IndexLevel.ROUTE and scope:
+        route_filter = " AND r.route_code = :route_code"
+        params["route_code"] = scope.upper()
+
     latest_date = (
-        await session.execute(text("SELECT max(observed_at::date) FROM fare_observations"))
+        await session.execute(
+            text(
+                "SELECT max(fo.observed_at::date) FROM fare_observations fo "
+                "JOIN routes r ON r.route_id = fo.route_id "
+                f"WHERE 1=1{route_filter}"
+            ),
+            params,
+        )
     ).scalar()
     if latest_date is None:
         return None
 
+    params["d"] = latest_date
     row = (
         await session.execute(
             text(
-                "SELECT avg(base_fare) AS avg_base, "
-                "avg(taxes + udf + airport_charges + convenience_fee) AS avg_taxes_fees, "
-                "avg(total_fare) AS avg_total, count(*) AS n "
-                "FROM fare_observations WHERE observed_at::date = :d"
+                "SELECT avg(fo.base_fare) AS avg_base, "
+                "avg(fo.taxes + fo.udf + fo.airport_charges + fo.convenience_fee) AS avg_taxes_fees, "
+                "avg(fo.total_fare) AS avg_total, count(*) AS n "
+                "FROM fare_observations fo JOIN routes r ON r.route_id = fo.route_id "
+                f"WHERE fo.observed_at::date = :d{route_filter}"
             ),
-            {"d": latest_date},
+            params,
         )
     ).mappings().one()
 
     return {
+        "scope": scope.upper() if level == IndexLevel.ROUTE and scope else "NATIONAL",
+        "scope_level": level.value,
         "as_of": latest_date,
         "avg_base_fare": round(float(row["avg_base"]), 2) if row["avg_base"] else None,
         "avg_taxes_and_fees": round(float(row["avg_taxes_fees"]), 2) if row["avg_taxes_fees"] else None,
@@ -85,18 +105,26 @@ async def get_price_breakdown(session: AsyncSession) -> dict | None:
     }
 
 
-async def get_alert_status(session: AsyncSession) -> dict:
-    """Week-over-week Core APIx threshold check (national), plus a per-route base-fare
-    spike check. Deliberately a *different* comparison window than the existing anomaly
-    detector (which compares against a 10-60-day-old lead-time-conditioned baseline) -
-    this is specifically "how much did the headline policy number move in the last
-    week," the RBI-facing question, not a per-observation data-quality check."""
-    latest = await core_repo.latest(session, IndexLevel.NATIONAL)
+async def get_alert_status(
+    session: AsyncSession,
+    level: IndexLevel = IndexLevel.NATIONAL,
+    scope: str | None = None,
+) -> dict:
+    """Return a national alert or a route-scoped Core APIx alert.
+
+    This uses a different comparison window than the anomaly detector, which compares
+    against a 10-60-day lead-time-conditioned baseline: this is specifically how much
+    the selected policy series moved in the last week.
+    """
+    if level == IndexLevel.ROUTE and scope:
+        scope = scope.upper()
+
+    latest = await core_repo.latest(session, level, scope)
     if latest is None:
         return {"triggered": False, "reason": "no Core APIx data available"}
 
     week_ago = await core_repo.value_on_or_before(
-        session, IndexLevel.NATIONAL, "NATIONAL", latest.date - timedelta(days=7)
+        session, level, latest.scope, latest.date - timedelta(days=7)
     )
     wow_pct = None
     if week_ago and float(week_ago.index_value) > 0:
@@ -107,7 +135,9 @@ async def get_alert_status(session: AsyncSession) -> dict:
             2,
         )
 
-    route_rows = await core_repo.series(session, IndexLevel.ROUTE, date_to=latest.date)
+    route_rows = [] if level == IndexLevel.ROUTE else await core_repo.series(
+        session, IndexLevel.ROUTE, date_to=latest.date
+    )
     by_route: dict[str, list] = {}
     for r in route_rows:
         by_route.setdefault(r.scope, []).append(r)
@@ -128,23 +158,32 @@ async def get_alert_status(session: AsyncSession) -> dict:
         if spiking_route_pct is None or abs(change) > abs(spiking_route_pct):
             spiking_route, spiking_route_pct = route_code, round(change, 2)
 
-    national_triggered = wow_pct is not None and wow_pct > WOW_ALERT_THRESHOLD_PCT
-    route_triggered = (
-        spiking_route_pct is not None and abs(spiking_route_pct) > ROUTE_SPIKE_THRESHOLD_PCT
+    national_triggered = level == IndexLevel.NATIONAL and wow_pct is not None and wow_pct > WOW_ALERT_THRESHOLD_PCT
+    route_triggered = level == IndexLevel.ROUTE and wow_pct is not None and abs(wow_pct) > ROUTE_SPIKE_THRESHOLD_PCT
+    route_scan_triggered = (
+        level == IndexLevel.NATIONAL
+        and spiking_route_pct is not None
+        and abs(spiking_route_pct) > ROUTE_SPIKE_THRESHOLD_PCT
     )
-    triggered = national_triggered or route_triggered
+    triggered = national_triggered or route_triggered or route_scan_triggered
 
     message = None
     if triggered:
-        if route_triggered and (not national_triggered or abs(spiking_route_pct) > (wow_pct or 0)):
+        if route_scan_triggered and (not national_triggered or abs(spiking_route_pct) > (wow_pct or 0)):
             message = (
                 f"INFLATION WARNING: Severe base-fare volatility detected on {spiking_route}. "
-                f"Core APIx projected to breach RBI tolerance band ({spiking_route_pct:+.1f}% WoW)."
+                f"Route WoW change is {spiking_route_pct:+.1f}%, exceeding the "
+                f"route-spike alert threshold (±{ROUTE_SPIKE_THRESHOLD_PCT:.1f}%)."
+            )
+        elif level == IndexLevel.ROUTE:
+            message = (
+                f"INFLATION WARNING: {latest.scope} Core APIx moved {wow_pct:+.1f}% week-over-week, "
+                f"exceeding the route-spike alert threshold (±{ROUTE_SPIKE_THRESHOLD_PCT:.1f}%)."
             )
         else:
             message = (
                 f"INFLATION WARNING: Core APIx has moved {wow_pct:+.1f}% week-over-week, "
-                f"breaching the RBI upper tolerance band (+{WOW_ALERT_THRESHOLD_PCT:.1f}%)."
+                f"exceeding the national WoW alert threshold (+{WOW_ALERT_THRESHOLD_PCT:.1f}%)."
             )
 
     return {
@@ -152,8 +191,14 @@ async def get_alert_status(session: AsyncSession) -> dict:
         "status": "HIGH_INFLATION_RISK" if triggered else "NORMAL",
         "national_wow_pct": wow_pct,
         "national_threshold_pct": WOW_ALERT_THRESHOLD_PCT,
-        "spiking_route": spiking_route if route_triggered else None,
-        "spiking_route_wow_pct": spiking_route_pct if route_triggered else None,
+        "scope": latest.scope,
+        "scope_level": level.value,
+        "scope_wow_pct": wow_pct,
+        "scope_threshold_pct": (
+            ROUTE_SPIKE_THRESHOLD_PCT if level == IndexLevel.ROUTE else WOW_ALERT_THRESHOLD_PCT
+        ),
+        "spiking_route": spiking_route if route_scan_triggered else (latest.scope if route_triggered else None),
+        "spiking_route_wow_pct": spiking_route_pct if route_scan_triggered else (wow_pct if route_triggered else None),
         "route_threshold_pct": ROUTE_SPIKE_THRESHOLD_PCT,
         "message": message,
         "as_of": latest.date,

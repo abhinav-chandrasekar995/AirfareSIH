@@ -7,7 +7,8 @@ import { PriceBreakdownCard } from "@/components/kpi/PriceBreakdownCard";
 import { ApixTrendChart } from "@/components/charts/ApixTrendChart";
 import { InflationAlertBanner } from "@/components/rbi/InflationAlertBanner";
 import { EmptyState, ErrorState, Skeleton } from "@/components/panels/EmptyState";
-import { useApixComparison, usePriceBreakdown, useApixAlert } from "@/lib/api/hooks";
+import { useApixComparison, usePriceBreakdown, useApixAlert, useRoutes } from "@/lib/api/hooks";
+import type { RouteSummary } from "@/types/api";
 import { num, pct } from "@/lib/format";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,11 +20,15 @@ import { cn } from "@/lib/utils";
 // RBI_APIX_MODULE_LOG.md §0 for why.
 export default function RbiPolicyPage() {
   const [mode, setMode] = useState<"core" | "headline">("core");
-  const { data: comparison, isLoading: loadingComparison, isError: errComparison, error: comparisonError } = useApixComparison();
-  const { data: breakdown, isLoading: loadingBreakdown } = usePriceBreakdown();
-  const { data: alert, isLoading: loadingAlert } = useApixAlert();
+  const [selectedScope, setSelectedScope] = useState("NATIONAL");
+  const selectedLevel = selectedScope === "NATIONAL" ? "NATIONAL" : "ROUTE";
+  const selectedRoute = selectedScope === "NATIONAL" ? undefined : selectedScope;
+  const { data: routes, isLoading: loadingRoutes } = useRoutes();
+  const { data: comparison, isLoading: loadingComparison, isError: errComparison, error: comparisonError } = useApixComparison(selectedLevel, selectedRoute);
+  const { data: breakdown, isLoading: loadingBreakdown } = usePriceBreakdown(selectedLevel, selectedRoute);
+  const { data: alert, isLoading: loadingAlert } = useApixAlert(selectedLevel, selectedRoute);
 
-  const isLoading = loadingComparison || loadingBreakdown || loadingAlert;
+  const isLoading = loadingRoutes || loadingComparison || loadingBreakdown || loadingAlert;
 
   if (isLoading) {
     return (
@@ -50,7 +55,23 @@ export default function RbiPolicyPage() {
     <div>
       <PageHeader
         title="RBI Policy & Elasticity Simulator"
-        subtitle="Core vs Headline APIx against RBI inflation tolerance bands, with a live week-over-week alert"
+        subtitle="Core vs Headline APIx with base-level reference lines and scoped WoW alerts"
+        actions={
+          <label className="flex items-center gap-2 text-xs text-secondary">
+            <span className="font-mono uppercase tracking-wide">Scope</span>
+            <select
+              value={selectedScope}
+              onChange={(event) => setSelectedScope(event.target.value)}
+              className="border border-border-subtle bg-panel px-2 py-1.5 text-xs text-primary rounded-md"
+              aria-label="Select APIx scope"
+            >
+              <option value="NATIONAL">National</option>
+              {(routes?.data ?? []).filter((route: RouteSummary) => route.in_basket).map((route) => (
+                <option key={route.route_code} value={route.route_code}>{route.route_code}</option>
+              ))}
+            </select>
+          </label>
+        }
       />
 
       <InflationAlertBanner alert={alert.data} />
@@ -59,22 +80,22 @@ export default function RbiPolicyPage() {
         <KpiCard label="Core APIx" value={coreLatest ? num(coreLatest.index_value, 1) : "—"} context="base fare only" />
         <KpiCard label="Headline APIx" value={headlineLatest ? num(headlineLatest.index_value, 1) : "—"} context="total fare" />
         <KpiCard
-          label="National WoW"
-          value={alert.data.national_wow_pct !== null ? pct(alert.data.national_wow_pct) : "—"}
-          context={`tolerance ±${num(alert.data.national_threshold_pct, 1)}%`}
+            label={`${selectedLevel === "ROUTE" ? selectedScope : "National"} WoW`}
+            value={alert.data.scope_wow_pct !== null ? pct(alert.data.scope_wow_pct) : "—"}
+            context={`alert threshold ${selectedLevel === "ROUTE" ? "±" : "+"}${num(alert.data.scope_threshold_pct, 1)}% WoW`}
         />
-        <KpiCard
+          <KpiCard
           label="Alert Status"
           value={alert.data.status === "HIGH_INFLATION_RISK" ? "High Risk" : "Normal"}
-          context={alert.data.spiking_route ? `spike: ${alert.data.spiking_route}` : "no route spike"}
+            context={selectedLevel === "ROUTE" ? selectedScope : (alert.data.spiking_route ? `spike: ${alert.data.spiking_route}` : "no route spike")}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-8">
           <PanelShell
-            title="APIx Trend vs RBI Tolerance Bands"
-            info="Core (base-fare) or Headline (total-fare) APIx over the last ~120 days, against reference lines at base +4% and +6%."
+            title="APIx Trend vs Base-Level References"
+            info="Core (base-fare) or Headline (total-fare) APIx over the last ~120 days, with reference lines at index levels 104 and 106. These are separate from the WoW alert thresholds."
             source="core_index_values, index_values"
             count={points.length}
             actions={
@@ -105,8 +126,8 @@ export default function RbiPolicyPage() {
 
         <div className="lg:col-span-4">
           <PanelShell
-            title="Price Breakdown"
-            info="Average base fare vs taxes & fees, most recent day with observations."
+            title={`${selectedLevel === "ROUTE" ? selectedScope : "National"} Price Breakdown`}
+            info="Average base fare vs taxes & fees for the most recent date in the selected scope."
             source="fare_observations"
             count={breakdown?.data.n_observations}
           >
@@ -119,7 +140,7 @@ export default function RbiPolicyPage() {
 
           <div className="mt-4">
             <a
-              href="/backend/api/v1/reports/rbi-policy-brief"
+              href={`/backend/api/v1/reports/rbi-policy-brief?level=${selectedLevel}${selectedRoute ? `&scope=${selectedRoute}` : ""}`}
               className="flex items-center justify-center gap-1.5 w-full text-xs font-bold uppercase tracking-wide bg-interactive text-white rounded-md px-3 py-2.5 hover:bg-interactive-hover"
             >
               <Download size={13} /> Generate RBI Policy Brief
